@@ -8,6 +8,7 @@ One row per tracked project. Keep this file in sync with `projects/*.md`.
 | scheduler | Prototype / notes only | ateate-roro | TBD (messaging, payments, calendar) | [projects/scheduler.md](projects/scheduler.md) |
 | collectors-hub | In progress | cbailey03 (collab) | Rust (backend) + Django/JS (frontend) | [projects/collectors-hub.md](projects/collectors-hub.md) |
 | hub | Active | ateate-roro | Docs / Markdown | this repo |
+| local-model-inference | Active | ateate-roro | Python / JSON / shell (Ollama + OpenCode) | [projects/local-model-inference.md](projects/local-model-inference.md) |
 
 ## Naming rules
 
