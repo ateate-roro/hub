@@ -82,6 +82,46 @@ What it does:
 Usage: run `.\projects\local-model\start-ollama.ps1` in PowerShell before starting a
 conversation, or add it to your shell profile / OpenCode startup.
 
+## WSL port forwarding for OpenCode (ollama-forwarder)
+
+OpenCode's Ollama provider is hardcoded to `127.0.0.1:11434`, but Ollama on Windows
+is only reachable from WSL via the Windows host IP (`172.28.192.1` by default). The
+`ollama-forwarder` Python script forwards `127.0.0.1:11434` → `<WSL host IP>:11434`
+so OpenCode can reach local Ollama models from WSL.
+
+- Script: `projects/local-model/ollama-forwarder` (Python)
+- Started automatically by `~/.bashrc` on every new WSL session when Ollama is
+  reachable and nothing is already listening on `127.0.0.1:11434`.
+- Forwarder target is set from the current WSL host IP (`OLLAMA_FORWARD_TARGET`),
+  which can change between sessions.
+
+### ~/.bashrc integration (WSL)
+
+The `.bashrc` local-model block (`# --- Local-only model setup for WSL terminals ---`)
+does the following on every new shell:
+
+1. Detects the Windows host IP from `/etc/resolv.conf` and exports `OLLAMA_HOST`.
+2. If Ollama is unreachable, auto-starts it on Windows via
+   `projects/local-model/start-ollama.ps1` (bound to `0.0.0.0:11434`).
+   - Warns with manual instructions if auto-start fails.
+3. If Ollama is up, starts `ollama-forwarder` on `127.0.0.1:11434`.
+4. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
+   `~/.config/opencode/last-working-model` for offline fallback.
+
+OpenCode default model is `ollama/qwen3-coder:30b`, configured in
+`~/.config/opencode/opencode.json`:
+
+```json
+{
+  "model": "ollama/qwen3-coder:30b",
+  "providers": {
+    "ollama": {
+      "baseURL": "http://172.28.192.1:11434/v1"
+    }
+  }
+}
+```
+
 ## Model license verification (free / open models only)
 
 | Model | License | Cost | Source |
