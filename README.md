@@ -21,8 +21,8 @@ No project work should be considered "done" until its applicable workflows have 
 ```
 .
 ├── README.md
-├── PROJECTS.md
 ├── projects/
+│   └── PROJECTS.md
 ├── workflows/
 ├── models/
 └── templates/
@@ -30,6 +30,6 @@ No project work should be considered "done" until its applicable workflows have 
 
 ## Quick links
 
-- Project index: `PROJECTS.md`
+- Project index: `projects/PROJECTS.md`
 - Workflows: `workflows/README.md`
 - Model suggestions: `models/suggestions.md`

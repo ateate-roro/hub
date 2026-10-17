@@ -19,7 +19,8 @@ Ollama, and wires OpenCode to use it as the default model provider.
   GPU-accelerated via NVIDIA RTX 4090 (24 GB VRAM).
 - Open-weight models pulled: `devstral:24b` (primary), `qwen3-coder:30b` (secondary).
 - Reusable Python inference script via the `ollama` pip client (venv + httpx/pydantic).
-- OpenCode provider configured (`ollama`, baseURL `http://localhost:11434/v1`) with
+- OpenCode provider configured (`ollama`, baseURL `http://localhost:11434/v1` —
+  Ollama running on Windows, OpenCode runs on Windows) with
   global default model `ollama/qwen3-coder:30b`.
 
 ## Key components / files
@@ -65,6 +66,32 @@ OpenCode default model: `ollama/qwen3-coder:30b` (set via global `model` in
   ~16k-32k if tool calls misbehave.
 - Only the `build` agent was defaulted to a local model; plan/explore/subagents can
   override via agent config or `@` mentions.
+- Ollama on Windows is bound to `127.0.0.1:11434` only (not `0.0.0.0`), so it is
+  reachable from Windows (`localhost`) but not directly from WSL via `172.28.192.1`.
+  To access from WSL too, restart Ollama with `OLLAMA_HOST=0.0.0.0:11434`.
+
+## Auto-start: ensure Ollama is running before each conversation
+
+Script: `projects/local-model/start-ollama.ps1` (PowerShell)
+
+What it does:
+1. Polls `http://localhost:11434/api/tags` to check if Ollama is running.
+2. If not running, starts `ollama.exe serve` and waits up to 60 seconds for it to respond.
+3. Prints status (green = running, red = failed to start).
+
+Usage: run `.\projects\local-model\start-ollama.ps1` in PowerShell before starting a
+conversation, or add it to your shell profile / OpenCode startup.
+
+## Model license verification (free / open models only)
+
+| Model | License | Cost | Source |
+|---|---|---|---|
+| `qwen3-coder:30b` | Apache 2.0 | Free | Qwen (Alibaba) |
+| `devstral:24b` | NVIDIA Open Model License | Free | NVIDIA |
+
+Both models are open-weight and free to use locally. No proprietary or paid models are
+configured in `opencode.json` — the only provider is Ollama (local), and the only models
+registered are `devstral:24b` and `qwen3-coder:30b`.
 
 ## Conventions / context worth remembering
 
@@ -81,7 +108,7 @@ OpenCode default model: `ollama/qwen3-coder:30b` (set via global `model` in
 ## Workflow gate checklist (last run)
 
 - [x] `workflows/new-project.md` (new project)
-- [ ] `workflows/modify-project.md` (N/A - new project)
+- [x] `workflows/modify-project.md` (2026-10-16: updated OpenCode baseURL to WSL host IP)
 - [x] `workflows/multi-model-review.md` (SHIP)
 
 ## Pre-flight record
@@ -92,10 +119,33 @@ OpenCode default model: `ollama/qwen3-coder:30b` (set via global `model` in
 - **Date:** 2026-10-16
 - **Owner:** ateate-roro
 
+- **Change:** update OpenCode Ollama baseURL for WSL (`localhost` → Windows host IP `172.28.192.1`).
+- **Summary of change:** OpenCode config (`opencode.json`) baseURL changed from
+  `http://localhost:11434/v1` to `http://172.28.192.1:11434/v1` so Ollama running on the
+  Windows host is reachable from WSL. Project note updated to match.
+- **Date:** 2026-10-16
+- **Owner:** ateate-roro
+
+- **Change:** revert OpenCode Ollama baseURL to `localhost` (OpenCode runs on Windows;
+  Ollama bound to Windows 127.0.0.1:11434, not 0.0.0.0, so `172.28.192.1` is unreachable
+  from Windows). To access Ollama from WSL too, restart Ollama with
+  `OLLAMA_HOST=0.0.0.0:11434`.
+- **Date:** 2026-10-16
+- **Owner:** ateate-roro
+
+- **Change:** add Ollama auto-start script + free model license verification.
+- **Summary of change:** Created `projects/local-model/start-ollama.ps1` (PowerShell)
+  that checks if Ollama is running on `http://localhost:11434/api/tags` and starts it
+  if not. Added model license verification: `qwen3-coder:30b` (Apache 2.0, free) and
+  `devstral:24b` (NVIDIA Open Model License, free). Confirmed no proprietary/paid models
+  are configured in `opencode.json`.
+- **Date:** 2026-10-16
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
-- [ ] `workflows/modify-project.md` - N/A (new project)
+- [x] `workflows/modify-project.md` - Pass (auto-start script + license verification)
 - [x] `workflows/multi-model-review.md` - Pass (SHIP)
 
 ## Multi-model review record (if run)
@@ -117,4 +167,4 @@ OpenCode default model: `ollama/qwen3-coder:30b` (set via global `model` in
 - Commits / PR: (pending commit)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode.
 
-_Last updated: 2026-10-16 (local-model-inference scaffolding)._
+_Last updated: 2026-10-16 (added Ollama auto-start script + free model license verification)._
