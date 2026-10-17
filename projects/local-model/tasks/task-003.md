@@ -78,4 +78,5 @@ True-reboot validation still pending (needs a real reboot; check
 
 - **Date:** 2026-10-17
 - **Owner:** ateate-roro
-- **PR:** https://github.com/ateate-roro/hub/pull/11 (work)
+- **PR:** https://github.com/ateate-roro/hub/pull/11 (work),
+  https://github.com/ateate-roro/hub/pull/12 (task record)
