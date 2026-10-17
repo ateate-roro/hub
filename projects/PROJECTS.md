@@ -4,7 +4,7 @@ One row per tracked project. Keep this file in sync with `*.md`.
 
 | Project | Status | Owner / org | Stack | Notes file |
 |---|---|---|---|---|
-| super_stonk | Active (early) | ateate-roro | Python (yfinance, pandas) | [super_stonk.md](super_stonk.md) |
+| super_stonk | Active (early) | ateate-roro | Python (yfinance, pandas) | [super_stonk.md](super_stonk/context.md) |
 | scheduler | Prototype / notes only | ateate-roro | TBD (messaging, payments, calendar) | [scheduler.md](scheduler.md) |
 | collectors-hub | In progress | cbailey03 (collab) | Rust (backend) + Django/JS (frontend) | [collectors-hub.md](collectors-hub.md) |
 | hub | Active | ateate-roro | Docs / Markdown | this repo |
