@@ -6,7 +6,7 @@ stays easy to pick up again later.
 
 ## Naming
 
-- `YYYY-MM-DD-<short-description>.md`
+- `task-<number>.md` (e.g. `task-001.md`, `task-002.md`)
 
 ## Purpose
 

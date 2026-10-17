@@ -1,4 +1,4 @@
-# Reorganize local-model project
+# task-001 — Reorganize local-model project
 
 ## Summary
 
@@ -12,7 +12,7 @@ structure under `projects/` so context is easier to track going forward.
 
 2. **Created `tasks/` subfolder**
    - `projects/local-model/tasks/README.md` — explains purpose and naming convention
-   - `projects/local-model/tasks/2026-10-16-reorganize-local-model-project.md` — this file
+   - `projects/local-model/tasks/task-001.md` — this file
 
 3. **Moved project index into `projects/`**
    - `PROJECTS.md` → `projects/PROJECTS.md`
