@@ -2,7 +2,9 @@
 
 Central, versioned source of truth for two things:
 
-1. **Project context summaries** - one short, living note per project under `projects/`.
+1. **Project context summaries** - one short, living note per project under `projects/`,
+   plus a `tasks/` folder (with `task-<number>.md` notes) inside each project repo to
+   log context per session for efficient resume.
 2. **Reusable workflows & quality gates** - checked before/while **any** project is started or modified (`workflows/`).
 
 ## Operating rule (read this first)

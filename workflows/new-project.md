@@ -8,6 +8,9 @@ Run when creating a brand-new project/repo. All items required.
 - [ ] Decide stack, hosting, data model (rough spec written down).
 - [ ] Create repo; add README with setup + run.
 - [ ] Add a `projects/<name>.md` note in `hub` and a row in `projects/PROJECTS.md`.
+- [ ] Add a `tasks/` folder to the new repo with a `README.md` using `task-<number>.md` naming
+      (e.g. `task-001.md`) so each session can log context for efficient resume.
+- [ ] Add `scripts/consolidate-tasks.sh` and `workflows/consolidate-tasks.md` to the new repo.
 - [ ] Add dependencies/lockfile; pin versions.
 - [ ] Add license (decide and record).
 - [ ] Add minimal CI (lint/test) OR document why not.
