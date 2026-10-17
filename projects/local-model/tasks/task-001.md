@@ -31,3 +31,6 @@ structure under `projects/` so context is easier to track going forward.
 ## Branch
 
 `feat/local-model-inference` — clean working tree, both commits pushed.
+
+- **Completed:** 2026-10-16
+- **PR:** https://github.com/ateate-roro/hub/compare/feat/local-model-inference?expand=1
