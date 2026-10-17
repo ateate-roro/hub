@@ -75,8 +75,10 @@ What it does:
 2. If Ollama is running but bound to `127.0.0.1` only (not reachable from WSL),
    kills and restarts it with `OLLAMA_HOST=0.0.0.0:11434` so WSL can connect.
 3. If not running, starts `ollama.exe serve` bound to `0.0.0.0:11434`.
-4. Waits up to 60 seconds for Ollama to respond.
-5. Prints status (green = running, red = failed to start).
+4. Warms up preferred models (`qwen3-coder:30b`, `devstral:24b`) into GPU memory
+   so OpenCode doesn't hit ECONNRESET on first use.
+5. Waits up to 60 seconds for Ollama to respond.
+6. Prints status (green = running, red = failed to start).
 
 Usage: run `.\projects\local-model\start-ollama.ps1` in PowerShell before starting a
 conversation, or add it to your shell profile / OpenCode startup.
@@ -91,7 +93,8 @@ does the following on every new shell:
    (this IP can change between WSL sessions).
 3. If Ollama is unreachable from WSL, kills and restarts it on Windows via
    `projects/local-model/start-ollama.ps1` (bound to `0.0.0.0:11434`).
-4. Starts `ollama-forwarder` on `127.0.0.1:11434` as a fallback path.
+4. Warms up preferred local models into GPU memory so OpenCode doesn't hit
+   ECONNRESET on first use.
 5. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
    `~/.config/opencode/last-working-model` for offline fallback.
 

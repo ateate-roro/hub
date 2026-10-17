@@ -40,6 +40,28 @@ function Start-Ollama {
     return $false
 }
 
+function Warm-Up-Models {
+    # Warm up preferred models into GPU memory so OpenCode doesn't hit
+    # ECONNRESET on first use (large models take time to load).
+    $models = @("qwen3-coder:30b", "devstral:24b")
+    Write-Host "Warming up local models into GPU memory..." -ForegroundColor Yellow
+    foreach ($model in $models) {
+        $job = Start-Job -ScriptBlock {
+            param($m)
+            try {
+                $response = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method POST -ContentType "application/json" -Body "{\"model\":\"$m\",\"prompt\":\"hi\",\"stream\":false}" -TimeoutSec 120 -ErrorAction Stop
+                Write-Host "Warmed up $m" -ForegroundColor Green
+            } catch {
+                Write-Host "Failed to warm up $m: $($_.Exception.Message)" -ForegroundColor Red
+            }
+        } -ArgumentList $model
+        $job
+    }
+    # Wait for all warm-up jobs to complete
+    $jobs | Wait-Job -Timeout 120
+    Write-Host "Model warm-up complete." -ForegroundColor Green
+}
+
 # Main
 if (Test-OllamaRunning) {
     # Ollama responds on localhost, but may be bound to 127.0.0.1 only
@@ -47,6 +69,8 @@ if (Test-OllamaRunning) {
     Write-Host "Ollama already running - restarting with 0.0.0.0 binding for WSL access" -ForegroundColor Yellow
     Stop-Ollama
     Start-Ollama
+    Warm-Up-Models
 } else {
     Start-Ollama
+    Warm-Up-Models
 }
