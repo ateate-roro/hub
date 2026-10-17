@@ -42,6 +42,7 @@ fi
 # --- Ollama / local model reachability (WSL) --------------------------------
 OLLAMA_STATUS=""
 WSL_HOST_IP=""
+LAST_MODEL_FILE="$HOME/.config/opencode/last-working-model"
 if [ -f /etc/resolv.conf ]; then
   WSL_HOST_IP=$(grep nameserver /etc/resolv.conf 2>/dev/null | awk '{print $2}' | head -n1)
 fi
@@ -49,11 +50,18 @@ if [ -n "${WSL_HOST_IP:-}" ]; then
   if curl -s --max-time 2 "http://${WSL_HOST_IP}:11434/api/tags" >/dev/null 2>&1; then
     OLLAMA_STATUS="reachable at http://${WSL_HOST_IP}:11434 (local Ollama)"
   else
-    OLLAMA_STATUS="NOT reachable at http://${WSL_HOST_IP}:11434 — start Ollama on Windows with projects/local-model/start-ollama.ps1"
+    OLLAMA_STATUS="NOT reachable at http://${WSL_HOST_IP}:11434"
+    if [ -f "$LAST_MODEL_FILE" ]; then
+      LAST_MODEL=$(cat "$LAST_MODEL_FILE" 2>/dev/null)
+      OLLAMA_STATUS="${OLLAMA_STATUS} — offline fallback: last working local model = ${LAST_MODEL}"
+    else
+      OLLAMA_STATUS="${OLLAMA_STATUS} — start Ollama on Windows with projects/local-model/start-ollama.ps1"
+    fi
   fi
 else
   OLLAMA_STATUS="could not detect Windows host IP from /etc/resolv.conf"
 fi
+unset LAST_MODEL_FILE LAST_MODEL
 
 # --- Model suggestions -----------------------------------------------------
 MODEL_SUGGESTIONS=""
