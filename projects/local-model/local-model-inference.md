@@ -98,6 +98,38 @@ does the following on every new shell:
 5. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
    `~/.config/opencode/last-working-model` for offline fallback.
 
+### Boot-proof autostart (2026-10-17)
+
+The autofix above used to exist only as a manual script plus an interactive
+`.bashrc` block, so processes that never source `.bashrc` (Orca-spawned
+OpenCode service/agents) hit `ModelUnavailableError` and fell back to cloud
+models after a reboot. Wiring now guarantees correctness before any user
+process starts:
+
+1. **Windows logon:** `Startup\Ollama.lnk` runs `start-ollama.ps1` (the stock
+   `ollama app.exe` tray shortcut was renamed to
+   `Ollama (stock tray, disabled).lnk.disabled`), and the user environment
+   variable `OLLAMA_HOST=0.0.0.0:11434` makes any manual Ollama launch
+   WSL-reachable too.
+2. **WSL boot:** `/etc/wsl.conf` `[boot] command=` runs
+   `/usr/local/bin/wsl-ollama-bootfix.sh` (root-owned; versioned copy in this
+   folder) on every VM start, regardless of shell. It detects the current
+   Windows host IP, syncs `~/.config/opencode/opencode.json` `baseURL`, polls
+   Ollama from WSL (a 127.0.0.1-only server fails this check), launches the
+   ps1 fix early if Ollama is down, starts `ollama-forwarder`
+   (`127.0.0.1:11434` fallback path), and runs a detached warm-up (devstral
+   first, `qwen3-coder:30b` last so the default model stays VRAM-resident).
+   All children are `setsid`-detached so they survive session teardown.
+   Log: `/var/log/wsl-ollama-bootfix.log`.
+3. **Fixed three `start-ollama.ps1` bugs** that had silently disabled every
+   earlier auto-fix attempt: a `$m:` parse error (PowerShell therefore never
+   executed a single line of the script), an unassigned `$jobs` (warm-up never
+   waited), a too-strict `0.0.0.0`-only binding check (Ollama 0.40 binds the
+   dual-stack `::` wildcard), plus a kill that now covers `ollama app` and
+   waits for the port to actually free.
+
+The `.bashrc` block remains as an interactive safety net.
+
 ## WSL port forwarding for OpenCode (ollama-forwarder)
 
 OpenCode's Ollama provider is hardcoded to `127.0.0.1:11434`, but Ollama on Windows
@@ -210,11 +242,24 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - **Date:** 2026-10-16
 - **Owner:** ateate-roro
 
+- **Change:** boot-proof Ollama autostart (Windows logon + WSL boot hook)
+- **Summary of change:** Startup\Ollama.lnk now runs start-ollama.ps1 (stock
+  tray disabled as backup) and user env OLLAMA_HOST=0.0.0.0:11434 is set;
+  new /etc/wsl.conf [boot] command runs wsl-ollama-bootfix.sh (host-IP detect,
+  opencode.json baseURL sync, early ps1 launch, forwarder, detached warm-up).
+  Fixed three start-ollama.ps1 bugs ($m: parse error - script never executed;
+  unassigned $jobs; binding check now accepts dual-stack ::). Verified with a
+  simulated cold start: `opencode run -m ollama/qwen3-coder:30b` answered OK
+  in 2s and a fresh agent session ran on the local model (LOCAL-OK).
+- **Date:** 2026-10-17
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
 - [x] `workflows/modify-project.md` - Pass (auto-start script + license verification)
 - [x] `workflows/multi-model-review.md` - Pass (SHIP)
+- [ ] `workflows/modify-project.md` - 2026-10-17: boot-proof autostart (note updated, tests run; multi-model review pending before merge)
 
 ## Multi-model review record (if run)
 
@@ -235,4 +280,4 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - Commits / PR: (pending commit)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode.
 
-_Last updated: 2026-10-16 (aligned model suggestions with local Ollama models; added Local (Ollama) column + local-only practical pick)._
+_Last updated: 2026-10-17 (boot-proof Ollama autostart: Windows logon + WSL boot hook; fixed start-ollama.ps1 bugs)._
