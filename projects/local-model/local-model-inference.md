@@ -66,21 +66,37 @@ OpenCode default model: `ollama/qwen3-coder:30b` (set via global `model` in
   ~16k-32k if tool calls misbehave.
 - Only the `build` agent was defaulted to a local model; plan/explore/subagents can
   override via agent config or `@` mentions.
-- Ollama on Windows is bound to `127.0.0.1:11434` only (not `0.0.0.0`), so it is
-  reachable from Windows (`localhost`) but not directly from WSL via `172.28.192.1`.
-  To access from WSL too, restart Ollama with `OLLAMA_HOST=0.0.0.0:11434`.
-
-## Auto-start: ensure Ollama is running before each conversation
+## Auto-start / auto-fix: ensure Ollama is running and reachable from WSL
 
 Script: `projects/local-model/start-ollama.ps1` (PowerShell)
 
 What it does:
-1. Polls `http://localhost:11434/api/tags` to check if Ollama is running.
-2. If not running, starts `ollama.exe serve` and waits up to 60 seconds for it to respond.
-3. Prints status (green = running, red = failed to start).
+1. Polls `http://127.0.0.1:11434/api/tags` to check if Ollama is running.
+2. If Ollama is running but bound to `127.0.0.1` only (not reachable from WSL),
+   kills and restarts it with `OLLAMA_HOST=0.0.0.0:11434` so WSL can connect.
+3. If not running, starts `ollama.exe serve` bound to `0.0.0.0:11434`.
+4. Warms up preferred models (`qwen3-coder:30b`, `devstral:24b`) into GPU memory
+   so OpenCode doesn't hit ECONNRESET on first use.
+5. Waits up to 60 seconds for Ollama to respond.
+6. Prints status (green = running, red = failed to start).
 
 Usage: run `.\projects\local-model\start-ollama.ps1` in PowerShell before starting a
 conversation, or add it to your shell profile / OpenCode startup.
+
+### ~/.bashrc integration (WSL)
+
+The `.bashrc` local-model block (`# --- Local-only model setup for WSL terminals ---`)
+does the following on every new shell:
+
+1. Detects the Windows host IP from `/etc/resolv.conf` and exports `OLLAMA_HOST`.
+2. Syncs `~/.config/opencode/opencode.json` `baseURL` to the current host IP
+   (this IP can change between WSL sessions).
+3. If Ollama is unreachable from WSL, kills and restarts it on Windows via
+   `projects/local-model/start-ollama.ps1` (bound to `0.0.0.0:11434`).
+4. Warms up preferred local models into GPU memory so OpenCode doesn't hit
+   ECONNRESET on first use.
+5. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
+   `~/.config/opencode/last-working-model` for offline fallback.
 
 ## WSL port forwarding for OpenCode (ollama-forwarder)
 
@@ -149,6 +165,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 - [x] `workflows/new-project.md` (new project)
 - [x] `workflows/modify-project.md` (2026-10-16: updated OpenCode baseURL to WSL host IP)
+- [x] `workflows/modify-project.md` (2026-10-16: aligned model suggestions with local Ollama models)
 - [x] `workflows/multi-model-review.md` (SHIP)
 
 ## Pre-flight record
@@ -182,6 +199,17 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - **Date:** 2026-10-16
 - **Owner:** ateate-roro
 
+- **Change:** align model suggestions with local Ollama models (make review local).
+- **Summary of change:** Added a "Local (Ollama)" column to `models/suggestions.md`
+  mapping P=ollama/devstral:24b (llama family), R=ollama/qwen3-coder:30b (qwen family),
+  B=ollama/qwen3-coder:30b, plus a "Local-only (Ollama, free)" practical pick. This
+  makes multi-model review use local models per the local-model-inference setup,
+  resolving the prior mismatch where `models/suggestions.md` listed remote OpenCode
+  free models while the project note claimed local models were used. Verified P (devstral,
+  llama family) and R (qwen3-coder, qwen family) are cross-family.
+- **Date:** 2026-10-16
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
@@ -207,4 +235,4 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - Commits / PR: (pending commit)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode.
 
-_Last updated: 2026-10-16 (added Ollama auto-start script + free model license verification)._
+_Last updated: 2026-10-16 (aligned model suggestions with local Ollama models; added Local (Ollama) column + local-only practical pick)._
