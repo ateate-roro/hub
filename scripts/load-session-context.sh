@@ -39,6 +39,22 @@ else
   TASK_FILES=$(find tasks -name 'task-*.md' 2>/dev/null | sort -r)
 fi
 
+# --- Ollama / local model reachability (WSL) --------------------------------
+OLLAMA_STATUS=""
+WSL_HOST_IP=""
+if [ -f /etc/resolv.conf ]; then
+  WSL_HOST_IP=$(grep nameserver /etc/resolv.conf 2>/dev/null | awk '{print $2}' | head -n1)
+fi
+if [ -n "${WSL_HOST_IP:-}" ]; then
+  if curl -s --max-time 2 "http://${WSL_HOST_IP}:11434/api/tags" >/dev/null 2>&1; then
+    OLLAMA_STATUS="reachable at http://${WSL_HOST_IP}:11434 (local Ollama)"
+  else
+    OLLAMA_STATUS="NOT reachable at http://${WSL_HOST_IP}:11434 — start Ollama on Windows with projects/local-model/start-ollama.ps1"
+  fi
+else
+  OLLAMA_STATUS="could not detect Windows host IP from /etc/resolv.conf"
+fi
+
 # --- Model suggestions -----------------------------------------------------
 MODEL_SUGGESTIONS=""
 if [ -f "models/suggestions.md" ]; then
@@ -47,6 +63,15 @@ fi
 
 {
   echo "# Session context"
+  echo ""
+  echo "Repository: $REPO_ROOT"
+  echo "Layout: $LAYOUT"
+  echo "Date: $(date +%Y-%m-%d)"
+  echo ""
+
+  echo "## Local model (Ollama) status"
+  echo "- ${OLLAMA_STATUS}"
+  echo ""
   echo ""
   echo "Repository: $REPO_ROOT"
   echo "Layout: $LAYOUT"

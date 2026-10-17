@@ -1,6 +1,10 @@
 # start-ollama.ps1
-# Checks if Ollama is running; if not, starts it.
+# Checks if Ollama is running; if not, starts it bound to all interfaces
+# (0.0.0.0:11434) so it is reachable from WSL terminals as well as Windows.
 # Run this before each conversation/session to ensure local inference is available.
+
+# Bind Ollama to all interfaces so WSL (and other LAN clients) can reach it.
+$env:OLLAMA_HOST = "0.0.0.0:11434"
 
 $ollamaExe = "C:\Users\19198\AppData\Local\Programs\Ollama\ollama.exe"
 $ollamaUrl = "http://localhost:11434/api/tags"
