@@ -162,6 +162,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 - [x] `workflows/new-project.md` (new project)
 - [x] `workflows/modify-project.md` (2026-10-16: updated OpenCode baseURL to WSL host IP)
+- [x] `workflows/modify-project.md` (2026-10-16: aligned model suggestions with local Ollama models)
 - [x] `workflows/multi-model-review.md` (SHIP)
 
 ## Pre-flight record
@@ -195,6 +196,17 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - **Date:** 2026-10-16
 - **Owner:** ateate-roro
 
+- **Change:** align model suggestions with local Ollama models (make review local).
+- **Summary of change:** Added a "Local (Ollama)" column to `models/suggestions.md`
+  mapping P=ollama/devstral:24b (llama family), R=ollama/qwen3-coder:30b (qwen family),
+  B=ollama/qwen3-coder:30b, plus a "Local-only (Ollama, free)" practical pick. This
+  makes multi-model review use local models per the local-model-inference setup,
+  resolving the prior mismatch where `models/suggestions.md` listed remote OpenCode
+  free models while the project note claimed local models were used. Verified P (devstral,
+  llama family) and R (qwen3-coder, qwen family) are cross-family.
+- **Date:** 2026-10-16
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
@@ -220,4 +232,4 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - Commits / PR: (pending commit)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode.
 
-_Last updated: 2026-10-16 (added Ollama auto-start script + free model license verification)._
+_Last updated: 2026-10-16 (aligned model suggestions with local Ollama models; added Local (Ollama) column + local-only practical pick)._
