@@ -349,7 +349,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 ## Evidence / links
 
-- Commits / PR: branch `docs/oc-session-logging-helpers` (PR link added in follow-up commit, see `tasks/task-005.md`); previous change: https://github.com/ateate-roro/hub/pull/13 (branch `fix/ollama-v2-settings-baseurl`, commit `68a1324`)
+- Commits / PR: https://github.com/ateate-roro/hub/pull/14 (branch `docs/oc-session-logging-helpers`, commit `93ab567`); previous change: https://github.com/ateate-roro/hub/pull/13 (branch `fix/ollama-v2-settings-baseurl`, commit `68a1324`)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode — `opencode models` lists both local models and a two-prompt session succeeded after the fix.
 
 _Last updated: 2026-10-18 (session error-logging helpers `oc-errors` / `oc-logs` / `oc-repro` added to `.bashrc` and documented; earlier same day: V2 `settings.baseURL` config shape, ollama-forwarder retired)._

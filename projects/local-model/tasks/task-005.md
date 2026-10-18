@@ -53,7 +53,7 @@ project note (the helpers themselves live outside the repo).
 
 ## Follow-up
 
-- PR: (added in follow-up commit)
+- PR: https://github.com/ateate-roro/hub/pull/14
 - Still pending from task-004: sync the installed
   `/usr/local/bin/wsl-ollama-bootfix.sh` via sudo (verified this session
   still not done — installed copy has 0 `settings` references).
