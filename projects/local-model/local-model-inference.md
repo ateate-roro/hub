@@ -103,6 +103,36 @@ does the following on every new shell:
 5. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
    `~/.config/opencode/last-working-model` for offline fallback.
 
+### Session error logging (`.bashrc` helpers)
+
+A second `.bashrc` block (`# --- OpenCode session error logging ... ---`) adds
+triage helpers for capturing local-model failures while testing:
+
+| Helper | Purpose |
+|---|---|
+| `oc-errors [n]` | Print the last `n` error records (default 3) from the OpenCode log with full cause/stack, one record per entry |
+| `oc-logs` | Live-follow new `ERROR`/`WARN` records while a test session runs |
+| `oc-repro -m ollama/<model> "<prompt>"` | Rerun a failing prompt with client + private-server DEBUG logging teed to a timestamped `/tmp/oc-repro-*.log` |
+
+Log sources:
+
+- **OpenCode service log** — `~/.local/share/opencode/log/opencode.log`.
+  Every session/provider failure is already recorded at `level=ERROR` with
+  `sessionID=` / `run=` and the full cause/stack, so no logging needs to be
+  enabled. The shared service deliberately stays at default verbosity (the
+  file has no rotation); for deep dives use `oc-repro`'s one-shot DEBUG
+  capture — the documented reproduction pattern — instead of flipping the
+  service to DEBUG.
+- **Ollama on Windows** — `C:\Users\19198\AppData\Local\Ollama\app.log`
+  (from WSL: `/mnt/c/Users/19198/AppData/Local/Ollama/app.log`; rotates to
+  `app-N.log`). Catches server-side model-load failures / runner crashes that
+  look like client timeouts in OpenCode.
+
+Both `oc-errors` and `oc-logs` anchor on the record header
+(`^timestamp=... level=`), so logged shell commands that merely *mention*
+`level=ERROR` cannot false-match (an earlier unanchored version did — the
+helper matched its own logged invocation).
+
 ### Boot-proof autostart (2026-10-17)
 
 The autofix above used to exist only as a manual script plus an interactive
@@ -203,6 +233,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - [x] `workflows/modify-project.md` (2026-10-16: aligned model suggestions with local Ollama models)
 - [x] `workflows/multi-model-review.md` (SHIP)
 - [x] `workflows/modify-project.md` (2026-10-18: V2 `settings.baseURL` config shape + ollama-forwarder retirement)
+- [x] `workflows/modify-project.md` (2026-10-18b: session error-logging helpers documented — `oc-errors` / `oc-logs` / `oc-repro`)
 
 ## Pre-flight record
 
@@ -274,6 +305,23 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - **Date:** 2026-10-18
 - **Owner:** ateate-roro
 
+- **Change:** add session error-logging helpers to `~/.bashrc` (`oc-errors` / `oc-logs` / `oc-repro`) and document them here
+- **Summary of change:** Second `.bashrc` block adds three triage helpers for
+  local-model failures: `oc-errors [n]` prints the last `n` service-log error
+  records with full cause/stack; `oc-logs` live-follows `ERROR`/`WARN`
+  records; `oc-repro` reruns a failing prompt with client + private-server
+  DEBUG logging teed to a timestamped `/tmp/oc-repro-*.log`. No service
+  verbosity change (errors already log at `level=ERROR`; the log has no
+  rotation, so DEBUG stays a one-shot reproduction tool). Both grep-style
+  helpers anchor on the record header so logged commands that merely mention
+  `level=ERROR` cannot false-match (unanchored v1 did — it matched its own
+  logged invocation). Verified: `oc-errors` printed the real pre-fix
+  `ModelUnavailable` record + stack; `oc-repro` captured a full DEBUG run
+  incl. the model response (LOGOK); `oc-logs` runs clean. Helpers live in
+  `~/.bashrc` (outside the repo) — this note is their versioned documentation.
+- **Date:** 2026-10-18
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
@@ -282,6 +330,8 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - [ ] `workflows/modify-project.md` - 2026-10-17: boot-proof autostart (note updated, tests run; multi-model review pending before merge)
 - [x] `workflows/modify-project.md` - Pass (2026-10-18: V2 config-shape fix + forwarder retirement; note updated, tests run)
 - [x] `workflows/multi-model-review.md` - Pass (2026-10-18: R plan APPROVE, P build APPROVE, R final SHIP — records in `tasks/task-004.md`)
+- [x] `workflows/modify-project.md` - Pass (2026-10-18b: session error-logging helpers documented; note updated, helpers tested)
+- [x] `workflows/multi-model-review.md` - Pass (2026-10-18b: R final SHIP — records in `tasks/task-005.md`)
 
 ## Multi-model review record (if run)
 
@@ -299,7 +349,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 ## Evidence / links
 
-- Commits / PR: https://github.com/ateate-roro/hub/pull/13 (branch `fix/ollama-v2-settings-baseurl`, commit `68a1324`)
+- Commits / PR: https://github.com/ateate-roro/hub/pull/14 (branch `docs/oc-session-logging-helpers`, commit `93ab567`); previous change: https://github.com/ateate-roro/hub/pull/13 (branch `fix/ollama-v2-settings-baseurl`, commit `68a1324`)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode — `opencode models` lists both local models and a two-prompt session succeeded after the fix.
 
-_Last updated: 2026-10-18 (OpenCode V2 `settings.baseURL` config shape; ollama-forwarder retired — ECONNRESET after first prompt fixed)._
+_Last updated: 2026-10-18 (session error-logging helpers `oc-errors` / `oc-logs` / `oc-repro` added to `.bashrc` and documented; earlier same day: V2 `settings.baseURL` config shape, ollama-forwarder retired)._
