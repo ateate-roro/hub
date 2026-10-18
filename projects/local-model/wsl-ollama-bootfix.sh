@@ -4,12 +4,14 @@
 #
 # What it guarantees before user processes start:
 #   1. Detect the current Windows-host IP (it can change across WSL reboots).
-#   2. Sync ~/.config/opencode/opencode.json  baseURL -> http://<host-ip>:11434/v1
+#   2. Sync ~/.config/opencode/opencode.json  providers.ollama.settings.baseURL
+#      -> http://<host-ip>:11434/v1 (OpenCode V2 ignores a root-level baseURL).
 #   3. Verify Ollama answers from WSL (the check doubles as the binding check:
 #      a 127.0.0.1-only server is unreachable from WSL); if down, launch the
 #      Windows-side fix early (start-ollama.ps1) and keep polling.
-#   4. Start ollama-forwarder (127.0.0.1:11434 -> <host-ip>:11434) as a
-#      fallback path, detached with setsid so it survives session teardown.
+#   4. Stop the retired ollama-forwarder if a stale copy is running. OpenCode
+#      connects directly via settings.baseURL; the forwarder reset client
+#      connections when a response completed (ECONNRESET on the next prompt).
 #
 # Fast path (Ollama already up) finishes in a few seconds so it never
 # meaningfully delays WSL boot; worst case (Ollama down) is ~20s of polling
@@ -20,7 +22,6 @@ set -u
 trap '' HUP   # survive interop session teardown signalling
 LOG=/var/log/wsl-ollama-bootfix.log
 CFG=/home/svarog/.config/opencode/opencode.json
-FWD=/home/svarog/.local/bin/ollama-forwarder
 PS1_FIX='C:\Users\19198\orca\hub\projects\local-model\start-ollama.ps1'
 POWERSHELL=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
 LAUNCH_FLAG=/run/wsl-ollama-fix-launched
@@ -62,10 +63,14 @@ except Exception as e:
 st = os.stat(path)
 prov = cfg.setdefault("providers", {}).setdefault("ollama", {})
 new = "http://%s:11434/v1" % ip
-if prov.get("baseURL") == new:
+# OpenCode V2 reads providers.ollama.settings.baseURL; a root-level
+# "baseURL" (V1 shape) is silently ignored and breaks model discovery.
+stale = prov.pop("baseURL", None)
+settings = prov.setdefault("settings", {})
+if settings.get("baseURL") == new and stale is None:
     print("baseURL already current: %s" % new)
     sys.exit(0)
-prov["baseURL"] = new
+settings["baseURL"] = new
 cfg.setdefault("model", "ollama/qwen3-coder:30b")
 tmp = path + ".tmp"
 with open(tmp, "w") as f:
@@ -87,35 +92,19 @@ PYEOF
 }
 
 kill_forwarder() {
-    # awk-bracket trick: pattern must not match this script's own command line.
+    # Retired: OpenCode connects directly via providers.ollama.settings.baseURL.
+    # The forwarder reset client connections when a response completed, so any
+    # stale copy must be stopped, never started. awk-bracket trick: pattern
+    # must not match this script's own command line.
     local pids
     pids=$(ps -eo pid=,args= | awk '/[o]llama-forwarder/ {print $1}')
     if [ -n "$pids" ]; then
         kill $pids 2>/dev/null
         sleep 1
         kill -9 $pids 2>/dev/null
+        log "killed retired ollama-forwarder (pid(s): $pids)"
     fi
     return 0
-}
-
-start_forwarder() {
-    local ip="$1"
-    kill_forwarder
-    if ! command -v setsid >/dev/null 2>&1; then
-        log "WARNING: setsid not found - forwarder may not survive session teardown"
-    fi
-    if command -v runuser >/dev/null 2>&1; then
-        setsid runuser -u svarog -- env OLLAMA_FORWARD_TARGET="$ip" nohup "$FWD" >>"$LOG" 2>&1 </dev/null &
-    else
-        setsid env OLLAMA_FORWARD_TARGET="$ip" nohup "$FWD" >>"$LOG" 2>&1 </dev/null &
-    fi
-    disown 2>/dev/null || true
-    sleep 1
-    if ss -tln 2>/dev/null | grep -q ':11434'; then
-        log "forwarder listening on 127.0.0.1:11434 (target $ip)"
-    else
-        log "WARNING: forwarder not listening yet (target $ip)"
-    fi
 }
 
 launch_windows_fix() {
@@ -206,7 +195,8 @@ main() {
         launch_windows_fix
     fi
 
-    start_forwarder "$HOST_IP"
+    # Forwarder retired: ensure no stale copy is listening on 127.0.0.1:11434.
+    kill_forwarder
     log "=== bootfix done (host_ip=$HOST_IP ollama_up=$up) ==="
 }
 
