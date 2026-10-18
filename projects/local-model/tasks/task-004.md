@@ -71,6 +71,7 @@ response completed.
 
 ## Follow-up
 
+- PR: https://github.com/ateate-roro/hub/pull/13
 - The **installed** copy `/usr/local/bin/wsl-ollama-bootfix.sh` (root-owned,
   run by `/etc/wsl.conf [boot]`) must be re-synced from this branch, or the
   next WSL reboot re-adds the stale V1 `baseURL` and restarts the forwarder.

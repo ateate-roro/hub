@@ -299,7 +299,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 ## Evidence / links
 
-- Commits / PR: branch `fix/ollama-v2-settings-baseurl` (PR link added in follow-up commit, see `tasks/task-004.md`)
+- Commits / PR: https://github.com/ateate-roro/hub/pull/13 (branch `fix/ollama-v2-settings-baseurl`, commit `68a1324`)
 - Notes: Local-model setup verified end-to-end via Ollama + OpenCode — `opencode models` lists both local models and a two-prompt session succeeded after the fix.
 
 _Last updated: 2026-10-18 (OpenCode V2 `settings.baseURL` config shape; ollama-forwarder retired — ECONNRESET after first prompt fixed)._
