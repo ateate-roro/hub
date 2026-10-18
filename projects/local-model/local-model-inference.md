@@ -19,9 +19,9 @@ Ollama, and wires OpenCode to use it as the default model provider.
   GPU-accelerated via NVIDIA RTX 4090 (24 GB VRAM).
 - Open-weight models pulled: `devstral:24b` (primary), `qwen3-coder:30b` (secondary).
 - Reusable Python inference script via the `ollama` pip client (venv + httpx/pydantic).
-- OpenCode provider configured (`ollama`, baseURL `http://localhost:11434/v1` —
-  Ollama running on Windows, OpenCode runs on Windows) with
-  global default model `ollama/qwen3-coder:30b`.
+- OpenCode provider configured (`ollama`, `settings.baseURL`
+  `http://<windows-host-ip>:11434/v1` — Ollama runs on Windows, OpenCode runs
+  in WSL) with global default model `ollama/qwen3-coder:30b`.
 
 ## Key components / files
 
@@ -89,12 +89,17 @@ The `.bashrc` local-model block (`# --- Local-only model setup for WSL terminals
 does the following on every new shell:
 
 1. Detects the Windows host IP from `/etc/resolv.conf` and exports `OLLAMA_HOST`.
-2. Syncs `~/.config/opencode/opencode.json` `baseURL` to the current host IP
-   (this IP can change between WSL sessions).
-3. If Ollama is unreachable from WSL, kills and restarts it on Windows via
-   `projects/local-model/start-ollama.ps1` (bound to `0.0.0.0:11434`).
-4. Warms up preferred local models into GPU memory so OpenCode doesn't hit
-   ECONNRESET on first use.
+2. Syncs `~/.config/opencode/opencode.json` `providers.ollama.settings.baseURL`
+   to the current host IP (this IP can change between WSL sessions; OpenCode V2
+   ignores a root-level `baseURL`).
+3. Probes Ollama with retries (3 × 5 s) before declaring it down; only then
+   kills and restarts it on Windows via `projects/local-model/start-ollama.ps1`
+   (bound to `0.0.0.0:11434`). A single slow probe (e.g. while a large model
+   is loading) never kills a healthy Ollama mid-generation.
+4. Warms the default model (`qwen3-coder:30b`) into GPU memory — only when it
+   is not already loaded (`/api/ps`) — so the first prompt doesn't pay the
+   model-load cost. One model only: warming both preferred models evicts each
+   other from 24 GB VRAM on every new terminal.
 5. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
    `~/.config/opencode/last-working-model` for offline fallback.
 
@@ -114,13 +119,14 @@ process starts:
 2. **WSL boot:** `/etc/wsl.conf` `[boot] command=` runs
    `/usr/local/bin/wsl-ollama-bootfix.sh` (root-owned; versioned copy in this
    folder) on every VM start, regardless of shell. It detects the current
-   Windows host IP, syncs `~/.config/opencode/opencode.json` `baseURL`, polls
-   Ollama from WSL (a 127.0.0.1-only server fails this check), launches the
-   ps1 fix early if Ollama is down, starts `ollama-forwarder`
-   (`127.0.0.1:11434` fallback path), and runs a detached warm-up (devstral
-   first, `qwen3-coder:30b` last so the default model stays VRAM-resident).
-   All children are `setsid`-detached so they survive session teardown.
-   Log: `/var/log/wsl-ollama-bootfix.log`.
+   Windows host IP, syncs `~/.config/opencode/opencode.json`
+   `providers.ollama.settings.baseURL` (dropping any stale V1 root-level
+   `baseURL`), polls Ollama from WSL (a 127.0.0.1-only server fails this
+   check), launches the ps1 fix early if Ollama is down, kills the retired
+   `ollama-forwarder` if a stale copy is running, and runs a detached warm-up
+   (devstral first, `qwen3-coder:30b` last so the default model stays
+   VRAM-resident). All children are `setsid`-detached so they survive session
+   teardown. Log: `/var/log/wsl-ollama-bootfix.log`.
 3. **Fixed three `start-ollama.ps1` bugs** that had silently disabled every
    earlier auto-fix attempt: a `$m:` parse error (PowerShell therefore never
    executed a single line of the script), an unassigned `$jobs` (warm-up never
@@ -130,45 +136,42 @@ process starts:
 
 The `.bashrc` block remains as an interactive safety net.
 
-## WSL port forwarding for OpenCode (ollama-forwarder)
+## WSL port forwarding for OpenCode (ollama-forwarder) — RETIRED
 
-OpenCode's Ollama provider is hardcoded to `127.0.0.1:11434`, but Ollama on Windows
-is only reachable from WSL via the Windows host IP (`172.28.192.1` by default). The
-`ollama-forwarder` Python script forwards `127.0.0.1:11434` → `<WSL host IP>:11434`
-so OpenCode can reach local Ollama models from WSL.
-
-- Script: `projects/local-model/ollama-forwarder` (Python)
-- Started automatically by `~/.bashrc` on every new WSL session when Ollama is
-  reachable and nothing is already listening on `127.0.0.1:11434`.
-- Forwarder target is set from the current WSL host IP (`OLLAMA_FORWARD_TARGET`),
-  which can change between sessions.
-
-### ~/.bashrc integration (WSL)
-
-The `.bashrc` local-model block (`# --- Local-only model setup for WSL terminals ---`)
-does the following on every new shell:
-
-1. Detects the Windows host IP from `/etc/resolv.conf` and exports `OLLAMA_HOST`.
-2. If Ollama is unreachable, auto-starts it on Windows via
-   `projects/local-model/start-ollama.ps1` (bound to `0.0.0.0:11434`).
-   - Warns with manual instructions if auto-start fails.
-3. If Ollama is up, starts `ollama-forwarder` on `127.0.0.1:11434`.
-4. Records the last working local model (`qwen3-coder:30b` / `devstral:24b`) to
-   `~/.config/opencode/last-working-model` for offline fallback.
+> **Retired 2026-10-18 — do not start the forwarder.** OpenCode V2 is *not*
+> "hardcoded to `127.0.0.1:11434`": it reads the endpoint from
+> `providers.ollama.settings.baseURL` and connects to the Windows host
+> directly. The forwarder's `pipe()` shut down **both** sockets when *either*
+> direction ended, so every completed response reset the client connection and
+> the next prompt died with `ECONNRESET` — the "works after one prompt, then
+> times out" bug. `wsl-ollama-bootfix.sh` now kills any running copy instead
+> of starting one; the script is kept at `projects/local-model/ollama-forwarder`
+> for history only.
 
 OpenCode default model is `ollama/qwen3-coder:30b`, configured in
 `~/.config/opencode/opencode.json`:
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "model": "ollama/qwen3-coder:30b",
   "providers": {
     "ollama": {
-      "baseURL": "http://172.28.192.1:11434/v1"
+      "settings": {
+        "baseURL": "http://172.28.192.1:11434/v1"
+      }
     }
   }
 }
 ```
+
+> **V2 shape matters.** The endpoint belongs at
+> `providers.ollama.settings.baseURL`. The V1 root-level
+> `providers.ollama.baseURL` is accepted by the schema but **ignored at
+> runtime** — OpenCode then falls back to probing `127.0.0.1:11434`, which in
+> WSL found only the (broken) forwarder or nothing at all, producing
+> `Model unavailable: ollama/<model>` or `ECONNRESET`. Keep `/v1` in the URL:
+> discovery derives `/api/tags` and `/api/show` from it.
 
 ## Model license verification (free / open models only)
 
@@ -199,6 +202,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - [x] `workflows/modify-project.md` (2026-10-16: updated OpenCode baseURL to WSL host IP)
 - [x] `workflows/modify-project.md` (2026-10-16: aligned model suggestions with local Ollama models)
 - [x] `workflows/multi-model-review.md` (SHIP)
+- [x] `workflows/modify-project.md` (2026-10-18: V2 `settings.baseURL` config shape + ollama-forwarder retirement)
 
 ## Pre-flight record
 
@@ -254,12 +258,30 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 - **Date:** 2026-10-17
 - **Owner:** ateate-roro
 
+- **Change:** fix OpenCode V2 provider config shape (`settings.baseURL`) + retire ollama-forwarder
+- **Summary of change:** OpenCode V2 reads the Ollama endpoint from
+  `providers.ollama.settings.baseURL`; the documented root-level `baseURL` (V1)
+  was ignored at runtime, so discovery probed `127.0.0.1:11434` where the
+  forwarder sat — and the forwarder's `pipe()` closed both sockets when either
+  direction ended, resetting the client after each response (`ECONNRESET` on
+  the second prompt). Live `~/.bashrc` + `~/.config/opencode/opencode.json`
+  fixed outside the repo; in-repo: bootfix sync now writes `settings.baseURL`
+  (drops stale root key, idempotent-tested) and kills the forwarder instead of
+  starting it; forwarder docstring marked RETIRED; project note + config
+  snippet + `models/suggestions.md` corrected. Verified: `opencode models`
+  lists both local models; two consecutive prompts in one session both
+  succeeded; bash/python syntax + functional sync tests pass.
+- **Date:** 2026-10-18
+- **Owner:** ateate-roro
+
 ## Workflows run
 
 - [x] `workflows/new-project.md` - Pass
 - [x] `workflows/modify-project.md` - Pass (auto-start script + license verification)
 - [x] `workflows/multi-model-review.md` - Pass (SHIP)
 - [ ] `workflows/modify-project.md` - 2026-10-17: boot-proof autostart (note updated, tests run; multi-model review pending before merge)
+- [x] `workflows/modify-project.md` - Pass (2026-10-18: V2 config-shape fix + forwarder retirement; note updated, tests run)
+- [x] `workflows/multi-model-review.md` - Pass (2026-10-18: R plan APPROVE, P build APPROVE, R final SHIP — records in `tasks/task-004.md`)
 
 ## Multi-model review record (if run)
 
@@ -277,7 +299,7 @@ registered are `devstral:24b` and `qwen3-coder:30b`.
 
 ## Evidence / links
 
-- Commits / PR: (pending commit)
-- Notes: Local-model setup verified end-to-end via Ollama + OpenCode.
+- Commits / PR: branch `fix/ollama-v2-settings-baseurl` (PR link added in follow-up commit, see `tasks/task-004.md`)
+- Notes: Local-model setup verified end-to-end via Ollama + OpenCode — `opencode models` lists both local models and a two-prompt session succeeded after the fix.
 
-_Last updated: 2026-10-17 (boot-proof Ollama autostart: Windows logon + WSL boot hook; fixed start-ollama.ps1 bugs)._
+_Last updated: 2026-10-18 (OpenCode V2 `settings.baseURL` config shape; ollama-forwarder retired — ECONNRESET after first prompt fixed)._

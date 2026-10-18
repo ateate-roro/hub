@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
-Forward TCP connections from 127.0.0.1:11434 to the Windows host's Ollama
-(172.28.192.1:11434), so OpenCode's ollama provider (hardcoded to localhost)
-can reach local models running on Windows from WSL.
+RETIRED (2026-10-18) — do not start this forwarder. Kept for history only.
 
-Starts automatically via ~/.bashrc on every new shell session when Ollama
-is reachable but nothing is already listening on 127.0.0.1:11434.
+Why it existed: the OpenCode V1 config shape put the endpoint at a root-level
+`providers.ollama.baseURL`, which OpenCode V2 silently IGNORES. OpenCode then
+fell back to probing the default `127.0.0.1:11434` inside WSL, so this shim
+forwarded that port to the Windows host.
 
-Usage (added to ~/.bashrc):
-    export OLLAMA_FORWARD_TARGET="<WSL host IP>"   # set by .bashrc
-    nohup ollama-forwarder >/dev/null 2>&1 &
+Why it is retired: OpenCode V2 reads `providers.ollama.settings.baseURL` and
+connects to the Windows host directly — nothing should listen on
+127.0.0.1:11434. Worse, pipe() below shuts down and closes BOTH sockets when
+EITHER direction ends, so every completed response reset the client
+connection; the next prompt died with ECONNRESET ("works after one prompt,
+then times out"). wsl-ollama-bootfix.sh now kills any running copy.
+
+Original purpose: forward TCP connections from 127.0.0.1:11434 to the Windows
+host's Ollama (<wsl-host-ip>:11434) so OpenCode could reach local models.
 """
 import socket
 import threading

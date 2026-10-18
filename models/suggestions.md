@@ -20,7 +20,7 @@ Pick models from **different families** for P and R so they don't share blind sp
 - **Free-only (OpenCode):** P=Cat Jam Free (max), R=Space Bunny Free (high), B=Step 5 Preview Free (high).
   - Note: free models vary in reliability; keep changes small and re-run reviews.
 - **Local-only (Ollama, free):** P=ollama/devstral:24b, R=ollama/qwen3-coder:30b, B=ollama/qwen3-coder:30b.
-  - Uses the hub's local Ollama inference (`baseURL http://localhost:11434/v1`), no remote calls. Cross-family: devstral (llama family) for Plan, qwen3-coder (qwen family) for Review/Build.
+  - Uses the hub's local Ollama inference (`providers.ollama.settings.baseURL` → `http://<windows-host-ip>:11434/v1`), no remote calls. Cross-family: devstral (llama family) for Plan, qwen3-coder (qwen family) for Review/Build.
 
 ## Selection principles
 
